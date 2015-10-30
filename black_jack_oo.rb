@@ -1,10 +1,10 @@
 
 class Card
-  attr_accessor :suite, :value, :num
+  attr_accessor :suite, :face_value, :value
 
-  def initialize(suite, num, value)
+  def initialize(suite, face_value, value)
     @suite = suite
-    @num = num
+    @face_value = face_value
     @value = value
   end
 
@@ -14,11 +14,11 @@ class Deck
   attr_accessor :cards
 
   def initialize(deck_number)
-    numbers = %w(2 3 4 5 6 7 8 9 10 J K Q A)
+    face_values = %w(2 3 4 5 6 7 8 9 10 J K Q A)
     suites = %w(Spade Heart Diamond Club)
     @cards = []
     deck_number.times do
-      numbers.each do |num|
+      face_values.each do |num|
         suites.each do |suite|
           if %w(J K Q).include?(num)
             cards << Card.new(suite, num, 10)
@@ -51,13 +51,13 @@ class Hand
   def to_s
     display = ''
     hand.each do |card|
-      display << "'#{card.suite} #{card.num}' "
+      display << "'#{card.suite} #{card.face_value}' "
     end
-    display
+    display.strip
   end
 
   def show_one
-    "'#{hand[0].suite} #{hand[0].num}'"
+    "'#{hand[0].suite} #{hand[0].face_value}'"
   end
 
   def hit(deck)
@@ -93,8 +93,8 @@ class Person
   end
 
   def print_hand
-    puts "#{name}'s hand is #{hand}"
-    puts "#{name}'s total is #{hand.total}"
+    puts "#{name}'s hand is #{hand}."
+    puts "#{name}'s total is #{hand.total}."
   end
 
   def blackjack?
@@ -122,11 +122,10 @@ class Game
     player.name = name
   end
 
-  def output_deal
-    get_name
+  def display_hands
     player.print_hand
     puts ''
-    puts "Dealer's first card is #{dealer.hand.show_one}"
+    puts "Dealer's first card is #{dealer.hand.show_one}."
   end
 
   def players_turn
@@ -174,7 +173,8 @@ class Game
   end
 
   def run
-    output_deal
+    get_name
+    display_hands
 
     # check to see if both hands have 21
     if blackjack_tie?
