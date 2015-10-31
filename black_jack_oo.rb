@@ -11,7 +11,7 @@ class Card
 end
 
 class Deck
-  attr_accessor :cards
+  attr_reader :cards
 
   def initialize(deck_number)
     face_values = %w(2 3 4 5 6 7 8 9 10 J K Q A)
@@ -40,42 +40,42 @@ class Deck
 end
 
 class Hand
-  attr_accessor :hand
+  attr_reader :cards
 
   def initialize(*card)
-    @hand = []
-    hand << card
-    hand.flatten!
+    @cards = []
+    cards << card
+    cards.flatten!
   end
 
   def to_s
     display = ''
-    hand.each do |card|
+    cards.each do |card|
       display << "'#{card.suite} #{card.face_value}' "
     end
     display.strip
   end
 
   def show_one
-    "'#{hand[0].suite} #{hand[0].face_value}'"
+    "'#{cards[0].suite} #{cards[0].face_value}'"
   end
 
   def hit(deck)
-    hand << deck.cards.pop
+    cards << deck.cards.pop
   end
 
   def calculate_hand_values
     hand_values = []
-    hand.each do |card|
+    cards.each do |card|
       hand_values << card.value
     end
     hand_values.inject(:+)
   end
 
   def total
-    # if hand includes an 11 and is over 22, change the value of 11 to 1
-    hand.each do |card|
-      if card.value == 11 && calculate_hand_values > 22
+    # if hand includes an 11 and is over 21, change the value of 11 to 1
+    cards.each do |card|
+      if card.value == 11 && calculate_hand_values > 21
         card.value = 1
       end
     end
@@ -85,20 +85,65 @@ class Hand
 end
 
 class Person
-  attr_accessor :name, :hand
+  attr_accessor :name, :role
+  attr_reader :hand
 
-  def initialize(hand, name = nil)
+  def initialize(hand, role, name = nil)
     @hand = hand
+    @role = role
     @name = name
   end
 
   def print_hand
-    puts "#{name}'s hand is #{hand}."
-    puts "#{name}'s total is #{hand.total}."
+    puts "#{name}'s hand is #{hand}. #{name}'s total is #{hand.total}."
   end
 
   def blackjack?
     hand.total == 21
+  end
+
+  def play_hand(deck)
+    role == 'player' ? player_turn(deck) : dealer_turn(deck)
+  end
+
+  def display_blackjack
+    blackjack? ? display_blackjack = 'Blackjack!' : display_blackjack = ''
+    display_blackjack
+  end
+
+  def player_turn(deck)
+    while hand.total < 21
+      puts 'Do you want to hit or stay?'
+      action = gets.chomp
+      unless %w(h s).include?(action)
+        puts 'You did not enter h or s'
+        next
+      end
+      if action == 'h'
+        hand.hit(deck)
+        puts "#{name} your hand is #{hand}. Your total is #{hand.total}. #{display_blackjack}"
+      else
+        puts 'You chose to stay.'
+        puts ''
+        break
+      end
+      if hand.total > 21
+        puts "#{name} you busted."
+        exit
+      end
+    end
+
+  end
+
+  def dealer_turn(deck)
+    while hand.total < 17
+      puts "#{name} hits."
+      hand.hit(deck)
+      puts "#{name}'s hand is now #{hand}. Total is: #{hand.total}. #{display_blackjack}"
+      if hand.total > 21
+        puts "#{name} busted."
+      end
+    end
   end
 
 end
@@ -108,96 +153,54 @@ class Game
 
   def initialize
     self.deck = Deck.new(2)
-    self.player = Person.new(deck.deal_hand)
-    self.dealer = Person.new(deck.deal_hand, 'Dealer')
+    self.player = Person.new(deck.deal_hand, 'player')
+    self.dealer = Person.new(deck.deal_hand, 'dealer', 'Dealer')
   end
 
-  def blackjack_tie?
+  def both_players_have_blackjack?
     player.hand.total == 21 && dealer.hand.total == 21
   end
 
   def get_name
-    puts "Please enter your name:"
-    name = gets.chomp
-    player.name = name
+    puts 'Please enter your name:'
+    player.name = gets.chomp
   end
 
   def display_hands
     player.print_hand
     puts ''
     puts "Dealer's first card is #{dealer.hand.show_one}."
-  end
-
-  def players_turn
-    while player.hand.total < 21
-      puts 'Do you want to hit or stay?'
-      action = gets.chomp
-      unless %w(h s).include?(action)
-        puts 'You did not enter h or s'
-        next
-      end
-      if action == 'h'
-        player.hand.hit(deck)
-        puts "#{player.name} your hand is #{player.hand}."
-        puts "Your total is #{player.hand.total}."
-      else
-        puts 'You chose to stay.'
-        break
-      end
-      if player.hand.total > 21
-        puts "#{player.name} you busted."
-        exit
-      end
-    end
-  end
-
-  def dealers_turn
-    while dealer.hand.total < 17
-      puts "#{dealer.name} hits."
-      dealer.hand.hit(deck)
-      puts "#{dealer.name}'s hand is now #{dealer.hand}."
-      puts "Total is: #{dealer.hand.total}"
-      if dealer.hand.total > 21
-        puts "#{dealer.name} busted, you win!"
-        exit
-      end
-    end
+    puts ''
   end
 
   def compare_hands
-    if player.hand.total > dealer.hand.total
-      puts "#{player.name} you win!"
-    else
-      puts "#{dealer.name} wins!"
+    case
+      when dealer.hand.total > 21
+        puts "#{player.name} you win!"
+        exit
+      when both_players_have_blackjack? || player.hand.total == dealer.hand.total
+        puts "It's a tie."
+      when player.blackjack?
+        puts "Blackjack! #{player.name} you win!"
+      when dealer.blackjack?
+        puts "Blackjack! #{dealer.name} wins!"
+      else
+        player.hand.total > dealer.hand.total ? puts("#{player.name} you win!") : puts("#{dealer.name} wins!")
     end
   end
 
   def run
     get_name
     display_hands
-
-    # check to see if both hands have 21
-    if blackjack_tie?
+    if both_players_have_blackjack?
       dealer.print_hand
-      puts "It's a tie!"
+      puts "#{player.name} and #{dealer.name}  both have Blackjack!  It's a tie."
     else
-      players_turn
+      player.play_hand(deck)
       dealer.print_hand
-      dealers_turn
-
-      # after dealers turn, check again if both hands are 21
-      if blackjack_tie?
-        puts "It's a tie."
-        exit
-      end
-
-      if player.blackjack?
-        puts "#{player.name} you win!"
-        exit
-      end
-
-      compare_hands
+      dealer.play_hand(deck)
     end
+    compare_hands
   end
 end
 
